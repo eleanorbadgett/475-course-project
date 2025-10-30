@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import RectangleSelector
 import pdfplumber
 
-pdf_path = "/Users/eleanorbadgett/Downloads/475 pdfs/department_of_ed.pdf"
+pdf_path = "test_pdfs/JPMorgan_portfolio.pdf"
 page_number=0
 zoom = 3.0
 
@@ -214,7 +214,6 @@ table = {"vertical_strategy" : "explicit",
 
 # print(result)
 
-interactive_table_selector(img, 0, len(doc))
 
 
 
@@ -236,4 +235,4 @@ def extract_table_from_pdf(file_path, page_number, table_settings={}):
 
 
 
-extract_table_from_pdf("/Users/eleanorbadgett/Downloads/475 pdfs/department_of_ed.pdf",0, table)
+extract_table_from_pdf("test_pdfs/JPMorgan_portfolio.pdf",0, table)
