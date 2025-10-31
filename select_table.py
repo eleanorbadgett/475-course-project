@@ -1,79 +1,39 @@
 # pip install pymupdf matplotlib numpy
 import fitz # PyMuPDF
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.widgets import RectangleSelector
+matplotlib.use('TkAgg')
 import pdfplumber
-
-pdf_path = "test_pdfs/JPMorgan_portfolio.pdf"
-page_number=0
-zoom = 3.0
-
-# --- Load and render the page ---
-doc = fitz.open(pdf_path)
-if page_number < 0 or page_number >= len(doc):
-    raise IndexError(f"page_number {page_number} out of range (0..{len(doc)-1})")
-page = doc[page_number]
-
-# Render to an image (pixels). With Matrix(zoom, zoom), pixel coords map back by / zoom.
-mat = fitz.Matrix(zoom, zoom)
-pix = page.get_pixmap(matrix=mat, alpha=False)
-img = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, pix.n)
-if pix.n == 1:
-    img = np.repeat(img, 3, axis=2)  # grayscale -> RGB
-
-'''
-# --- Interactive selection ---
-fig, ax = plt.subplots() #can put figsize=(5,10) in ()
-ax.imshow(img, origin="upper")  # keep origin at top-left like PDF
-ax.set_title(f"Draw a rectangle on page {page_number+1} of {len(doc)}; close window to cancel")
-
-selection = {"done": False, "x0": None, "y0": None, "x1": None, "y1": None}
+import tkinter as tk 
+from tkinter import ttk
 
 
-def onselect(eclick, erelease):
-    selection["x0"], selection["y0"] = eclick.xdata, eclick.ydata
-    selection["x1"], selection["y1"] = erelease.xdata, erelease.ydata
-    selection["done"] = True
-    # Draw a visible rectangle
-    x0, y0 = selection["x0"], selection["y0"]
-    x1, y1 = selection["x1"], selection["y1"]
-    ax.add_patch(plt.Rectangle((min(x0,x1), min(y0,y1)),
-                                abs(x1-x0), abs(y1-y0),
-                                fill=False, linewidth=2))
-    fig.canvas.draw()
+def render_image(filename, page_number=0):
 
-toggle_selector = RectangleSelector(
-    ax, onselect,
-    useblit=True,
-    button=[1],           # left mouse button
-    minspanx=5, minspany=5,
-    spancoords='data',
-    interactive=True
-)
+    pdf_path = filename
+    #page_number=0
+    zoom = 3.0
 
-page_height = page.rect.height
-crop = page.cropbox
+    # --- Load and render the page ---
+    doc = fitz.open(pdf_path)
+    if page_number < 0 or page_number >= len(doc):
+        raise IndexError(f"page_number {page_number} out of range (0..{len(doc)-1})")
+    page = doc[page_number]
 
-plt.show()  # <-- blocks until the window is closed
+    # Render to an image (pixels). With Matrix(zoom, zoom), pixel coords map back by / zoom.
+    mat = fitz.Matrix(zoom, zoom)
+    pix = page.get_pixmap(matrix=mat, alpha=False)
+    img = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, pix.n)
+    if pix.n == 1:
+        img = np.repeat(img, 3, axis=2)  # grayscale -> RGB
+    
+    crop = page.cropbox
 
-doc.close()
-print ("CROP BOX:", crop)
-if not selection["done"]:
-    raise RuntimeError("No rectangle was selected.")
 
-'''
-crop = page.cropbox
-def interactive_table_selector(img, page_number, total_pages):
-    """
-    Let user select a rectangle and define rows/columns interactively.
 
-    Returns:
-        rect: (x0, y0, x1, y1)
-        rows: list of y positions of row lines
-        cols: list of x positions of column lines
-    """
-
+    '''
     # --- Interactive selection ---
     fig, ax = plt.subplots() #can put figsize=(5,10) in ()
     ax.imshow(img, origin="upper")  # keep origin at top-left like PDF
@@ -91,128 +51,352 @@ def interactive_table_selector(img, page_number, total_pages):
         x1, y1 = selection["x1"], selection["y1"]
         ax.add_patch(plt.Rectangle((min(x0,x1), min(y0,y1)),
                                     abs(x1-x0), abs(y1-y0),
-                                    fill=False, linewidth=2, edgecolor = 'green'))
-        fig.canvas.draw_idle()
+                                    fill=False, linewidth=2))
+        fig.canvas.draw()
 
-    rect_selector = RectangleSelector(ax, onselect, useblit=True, button=[1],
-                                        minspanx=5, minspany=5,
-                                        spancoords='data',
+    toggle_selector = RectangleSelector(
+        ax, onselect,
+        useblit=True,
+        button=[1],           # left mouse button
+        minspanx=5, minspany=5,
+        spancoords='data',
+        interactive=True
+    )
+
+    page_height = page.rect.height
+    crop = page.cropbox
+
+    plt.show()  # <-- blocks until the window is closed
+
+    doc.close()
+    print ("CROP BOX:", crop)
+    if not selection["done"]:
+        raise RuntimeError("No rectangle was selected.")
+
+    '''
+
+    def interactive_table_selector(img, page_number, total_pages):
+        import tkinter as tk
+        from tkinter import ttk
+        import matplotlib.pyplot as plt
+        from matplotlib.widgets import RectangleSelector
+
+        selection = {"x0": None, "y0": None, "x1": None, "y1": None, "done": False}
+        h_lines, v_lines = [], []
+
+        fig, ax = plt.subplots()
+        ax.imshow(img, cmap="gray")
+        ax.set_title(f"Page {page_number}/{total_pages} — Select table area")
+        plt.subplots_adjust(bottom=0.05, top=0.95, left=0.05, right=0.95)
+
+        # ---------------- Rectangle selection ----------------
+        def onselect(eclick, erelease):
+            selection.update({
+                "x0": eclick.xdata, "y0": eclick.ydata,
+                "x1": erelease.xdata, "y1": erelease.ydata,
+                "done": True
+            })
+            rect_selector.set_active(False)
+            open_popup()
+
+        rect_selector = RectangleSelector(ax, onselect,
+                                        useblit=True,
+                                        button=[1],
                                         interactive=True)
-    
 
-    # plt.show()
-    # if not selection["done"]:
-    #     return None, None, None
+        # ---------------- Grid drawing ----------------
+        def draw_grid(num_rows, num_cols):
+            nonlocal h_lines, v_lines
+            for line in h_lines + v_lines:
+                line.remove()
+            h_lines, v_lines = [], []
 
-    print("Draw a rectangle and press enter in the terminal to continue.")
-    plt.show(block = False)
-    while not selection["done"]:
-        plt.pause(0.1)  # keeps the figure interactive without closing it
+            x0, y0, x1, y1 = (selection[k] for k in ["x0", "y0", "x1", "y1"])
+            for i in range(1, num_rows):
+                y = min(y0, y1) + i * abs(y1 - y0) / num_rows
+                h_lines.append(ax.axhline(y, color='red', lw=1.5, picker=5))
+            for i in range(1, num_cols):
+                x = min(x0, x1) + i * abs(x1 - x0) / num_cols
+                v_lines.append(ax.axvline(x, color='blue', lw=1.5, picker=5))
+            fig.canvas.draw_idle()
 
-    # Rectangle done → disable selector
-    rect_selector.set_active(False)
+            # re-enable dragging
+            fig.canvas.mpl_connect('pick_event', on_pick)
+            fig.canvas.mpl_connect('motion_notify_event', on_motion)
+            fig.canvas.mpl_connect('button_release_event', on_release)
 
-    # --- Ask for rows/columns ---
-    num_rows = int(input("Enter number of rows in table: "))
-    num_cols = int(input("Enter number of columns in table: "))
+        # ---------------- Dragging logic ----------------
+        drag_state = {"line": None, "axis": None}
 
-    # --- Create grid lines ---
-    x0, y0, x1, y1 = selection["x0"], selection["y0"], selection["x1"], selection["y1"]
-    h_lines, v_lines = [], []
+        def on_pick(event):
+            drag_state["line"] = event.artist
+            if drag_state["line"] in h_lines:
+                drag_state["axis"] = "h"
+            elif drag_state["line"] in v_lines:
+                drag_state["axis"] = "v"
 
-    for i in range(1, num_rows):
-        y = min(y0,y1) + i * abs(y1-y0)/num_rows
-        h_lines.append(ax.axhline(y, color='red', lw=1.5, picker=5))
-    for i in range(1, num_cols):
-        x = min(x0,x1) + i * abs(x1-x0)/num_cols
-        v_lines.append(ax.axvline(x, color='blue', lw=1.5, picker=5))
+        def on_motion(event):
+            if drag_state["line"] is None or event.inaxes != ax:
+                return
+            if drag_state["axis"] == "h":
+                y = event.ydata
+                drag_state["line"].set_ydata([y, y])
+            else:
+                x = event.xdata
+                drag_state["line"].set_xdata([x, x])
+            fig.canvas.draw_idle()
 
-    fig.canvas.draw_idle()
+        def on_release(event):
+            drag_state["line"] = None
+            drag_state["axis"] = None
 
-    # --- Make lines draggable ---
-    selected_line = {"line": None, "type": None}
+        # ---------------- Popup ----------------
+        def open_popup():
+            popup = tk.Tk()
+            popup.title("Table Dimensions")
+            popup.geometry("250x150")
 
-    def on_press(event):
-        if event.inaxes != ax:
-            return
-        for line in h_lines + v_lines:
-            contains, _ = line.contains(event)
-            if contains:
-                selected_line["line"] = line
-                if line in h_lines:
-                    selected_line["type"] = "horizontal"
-                else:
-                    selected_line["type"] = "vertical"                
-                break
+            ttk.Label(popup, text="Number of Rows:").pack(pady=(15, 0))
+            row_entry = ttk.Entry(popup, justify="center")
+            row_entry.pack()
 
-    def on_motion(event):
-        line = selected_line["line"]
-        if line is None or event.xdata is None or event.ydata is None:
-            return
-        if line.get_xdata()[0] == line.get_xdata()[1]:  # vertical
-            line.set_xdata([event.xdata, event.xdata])
-        else:  # horizontal
-            line.set_ydata([event.ydata, event.ydata])
-        fig.canvas.draw_idle()
+            ttk.Label(popup, text="Number of Columns:").pack(pady=(10, 0))
+            col_entry = ttk.Entry(popup, justify="center")
+            col_entry.pack()
 
-    def on_release(event):
-        selected_line["line"] = None
-        selected_line["type"] = None
+            def on_go():
+                try:
+                    num_rows = int(row_entry.get())
+                    num_cols = int(col_entry.get())
+                except ValueError:
+                    return
+                popup.destroy()
+                draw_grid(num_rows, num_cols)
 
-    fig.canvas.mpl_connect("button_press_event", on_press)
-    fig.canvas.mpl_connect("motion_notify_event", on_motion)
-    fig.canvas.mpl_connect("button_release_event", on_release)
+            ttk.Button(popup, text="Go", command=on_go).pack(pady=15)
+            popup.lift()
+            popup.attributes('-topmost', True)
+            popup.after_idle(popup.attributes, '-topmost', False)
+            popup.mainloop()
 
-    ax.set_title("Drag lines to adjust rows/columns; close window when done")
-    plt.show(block = True)
+        # ---------------- Show window ----------------
+        plt.show(block=True)
 
-    # --- Collect final positions ---
-    rows = [line.get_ydata()[0] for line in h_lines]
-    cols = [line.get_xdata()[0] for line in v_lines]
-    rect = (min(x0,x1), min(y0,y1), max(x0,x1), max(y0,y1))
-    return rect, rows, cols
+        if not selection["done"]:
+            return None, [], []
 
-# --- Convert from pixel/image coords back to PDF coords (points) ---
-# With Matrix(zoom, zoom), pixel = pdf_points * zoom  => pdf_points = pixel / zoom.
-rectangle, rows, cols = interactive_table_selector(img, page_number, len(doc))
+        rows = [line.get_ydata()[0] for line in h_lines]
+        cols = [line.get_xdata()[0] for line in v_lines]
+        rect = (
+            min(selection["x0"], selection["x1"]),
+            min(selection["y0"], selection["y1"]),
+            max(selection["x0"], selection["x1"]),
+            max(selection["y0"], selection["y1"]),
+        )
+        return rect, rows, cols
 
-x0_img, y0_img = rectangle[0], rectangle[1]
-x1_img, y1_img = rectangle[2], rectangle[3]
+    '''
+    def interactive_table_selector(img, page_number, total_pages):
+        """
+        Let user select a rectangle and define rows/columns interactively.
 
-# x0_img, y0_img = selection["x0"], selection["y0"] 
-# x1_img, y1_img = selection["x1"], selection["y1"]  
+        Returns:
+            rect: (x0, y0, x1, y1)
+            rows: list of y positions of row lines
+            cols: list of x positions of column lines
+        """
 
-x0_pdf = (min(x0_img, x1_img) / zoom) + crop.x0 + crop.y0
-x1_pdf = (max(x0_img, x1_img) / zoom) + crop.x0 + crop.y0
-y0_pdf = (min(y0_img, y1_img) / zoom) + crop.x0 + crop.y0
-y1_pdf = (max(y0_img, y1_img) / zoom) + crop.x0 + crop.y0
+        # --- Interactive selection ---
+        fig, ax = plt.subplots() #can put figsize=(5,10) in ()
+        ax.imshow(img, origin="upper")  # keep origin at top-left like PDF
+        ax.set_title(f"Draw a rectangle on page {page_number+1} of {len(doc)}; close window to cancel")
+        plt.subplots_adjust(bottom=0.05, top=0.95, left=0.05, right=0.95)
 
-pdf_rows = [(y/zoom) + crop.x0 + crop.y0 for y in rows]
-pdf_cols = [(x/zoom) + crop.x0 + crop.y0 for x in cols]
+        selection = {"done": False, "x0": None, "y0": None, "x1": None, "y1": None}
 
-col_edge = [x0_pdf, x1_pdf]
-row_edge = [y0_pdf, y1_pdf]
-pdf_rows.extend(row_edge)
-pdf_cols.extend(col_edge)
+        #declare variables to be used across methods
+        h_lines, v_lines = [], []
+        active_line = None
+        is_horizontal = False
+
+        def onselect(eclick, erelease):
+            selection["x0"], selection["y0"] = eclick.xdata, eclick.ydata
+            selection["x1"], selection["y1"] = erelease.xdata, erelease.ydata
+            selection["done"] = True
+            # Draw a visible rectangle
+            x0, y0 = selection["x0"], selection["y0"]
+            x1, y1 = selection["x1"], selection["y1"]
+            ax.add_patch(plt.Rectangle((min(x0,x1), min(y0,y1)),
+                                        abs(x1-x0), abs(y1-y0),
+                                        fill=False, linewidth=2, edgecolor = 'green'))
+            fig.canvas.draw_idle()
+        rect_selector = RectangleSelector(ax, onselect, useblit=True, button=[1],
+                                            minspanx=5, minspany=5,
+                                            spancoords='data',
+                                            interactive=True)
+        
+        # --- Create grid lines ---
+        def draw_grid(num_rows, num_cols):
+            x0, y0, x1, y1 = selection["x0"], selection["y0"], selection["x1"], selection["y1"]
+            nonlocal h_lines, v_lines
+            for line in h_lines + v_lines:
+                line.remove()
+            h_lines, v_lines = [], []
+
+            for i in range(1, num_rows):
+                y = min(y0,y1) + i * abs(y1-y0)/num_rows
+                h_lines.append(ax.axhline(y, color='red', lw=1.5, picker=5))
+            for i in range(1, num_cols):
+                x = min(x0,x1) + i * abs(x1-x0)/num_cols
+                v_lines.append(ax.axvline(x, color='blue', lw=1.5, picker=5))
+
+            fig.canvas.draw_idle()
+
+            fig.canvas.mpl_connect('pick_event', on_press)
+            fig.canvas.mpl_connect('motion_notify_event', on_motion)
+            fig.canvas.mpl_connect('button_release_event', on_release)
+        #--- Popup for rows/columns input ---
+        def open_popup():
+            rect_selector.set_active(False)
+
+            popup = tk.Tk()
+            popup.title("Table Dimensions")
+            popup.geometry("250x150")
+
+            ttk.Label(popup, text="Number of Rows:").pack(pady=(15, 0))
+            row_entry = ttk.Entry(popup, justify="center")
+            row_entry.pack()
+
+            ttk.Label(popup, text="Number of Columns:").pack(pady=(10, 0))
+            col_entry = ttk.Entry(popup, justify="center")
+            col_entry.pack()
+
+            def on_go():
+                try:
+                    num_rows = int(row_entry.get())
+                    num_cols = int(col_entry.get())
+                except ValueError:
+                    return  # invalid input, ignore
+                popup.destroy()
+                draw_grid(num_rows, num_cols)
+
+            ttk.Button(popup, text="Go", command=on_go).pack(pady=15)
+
+            # Keep popup responsive while main Matplotlib window stays interactive
+            popup.lift()
+            popup.attributes('-topmost', True)
+            popup.after_idle(popup.attributes, '-topmost', False)
+            popup.mainloop()
+
+        
+
+        
+
+        # plt.show()
+        # if not selection["done"]:
+        #     return None, None, None
+
+        print("Draw a rectangle and press enter in the terminal to continue.")
+        plt.show(block = False)
+        while not selection["done"]:
+            plt.pause(0.1)  # keeps the figure interactive without closing it
+
+        # Rectangle done → disable selector
+        rect_selector.set_active(False)
+
+        open_popup()
 
 
 
-table = {"vertical_strategy" : "explicit",
-         "explicit_vertical_lines": pdf_cols,
-         "horizontal_strategy": "explicit",
-         "explicit_horizontal_lines": pdf_rows, 
-         }
 
-#print("pixels:", x0_img, y0_img, x1_img, y1_img, "\n") 
+        # --- Make lines draggable ---
+        selected_line = {"line": None, "type": None}
 
-# result = {
-#     "page": page_number,
-#     "pdf_rect": (x0_pdf, y0_pdf, x1_pdf, y1_pdf),
-#     "pdf_bbox_xywh": (x0_pdf, y0_pdf, x1_pdf - x0_pdf, y1_pdf - y0_pdf),
-# }
-# print("Selected rectangle (PDF points):", result)
+        def on_press(event):
+            if event.inaxes != ax:
+                return
+            for line in h_lines + v_lines:
+                contains, _ = line.contains(event)
+                if contains:
+                    selected_line["line"] = line
+                    if line in h_lines:
+                        selected_line["type"] = "horizontal"
+                    else:
+                        selected_line["type"] = "vertical"                
+                    break
 
-# print(result)
+        def on_motion(event):
+            line = selected_line["line"]
+            if line is None or event.xdata is None or event.ydata is None:
+                return
+            if line.get_xdata()[0] == line.get_xdata()[1]:  # vertical
+                line.set_xdata([event.xdata, event.xdata])
+            else:  # horizontal
+                line.set_ydata([event.ydata, event.ydata])
+            fig.canvas.draw_idle()
+
+        def on_release(event):
+            selected_line["line"] = None
+            selected_line["type"] = None
+
+        fig.canvas.mpl_connect("button_press_event", on_press)
+        fig.canvas.mpl_connect("motion_notify_event", on_motion)
+        fig.canvas.mpl_connect("button_release_event", on_release)
+
+        ax.set_title("Drag lines to adjust rows/columns; close window when done")
+        plt.show(block = True)
+
+        # --- Collect final positions ---
+        rows = [line.get_ydata()[0] for line in h_lines]
+        cols = [line.get_xdata()[0] for line in v_lines]
+        rect = (min(selection["x0"],selection["x1"]), min(selection["y0"],selection["y1"]),
+                max(selection["x0"],selection["x1"]), max(selection["y0"],selection["y1"]))
+        return rect, rows, cols
+        '''
+
+    # --- Convert from pixel/image coords back to PDF coords (points) ---
+    # With Matrix(zoom, zoom), pixel = pdf_points * zoom  => pdf_points = pixel / zoom.
+    rectangle, rows, cols = interactive_table_selector(img, page_number, len(doc))
+
+    x0_img, y0_img = rectangle[0], rectangle[1]
+    x1_img, y1_img = rectangle[2], rectangle[3]
+
+    # x0_img, y0_img = selection["x0"], selection["y0"] 
+    # x1_img, y1_img = selection["x1"], selection["y1"]  
+
+    x0_pdf = (min(x0_img, x1_img) / zoom) + crop.x0 + crop.y0
+    x1_pdf = (max(x0_img, x1_img) / zoom) + crop.x0 + crop.y0
+    y0_pdf = (min(y0_img, y1_img) / zoom) + crop.x0 + crop.y0
+    y1_pdf = (max(y0_img, y1_img) / zoom) + crop.x0 + crop.y0
+
+    pdf_rows = [(y/zoom) + crop.x0 + crop.y0 for y in rows]
+    pdf_cols = [(x/zoom) + crop.x0 + crop.y0 for x in cols]
+
+    col_edge = [x0_pdf, x1_pdf]
+    row_edge = [y0_pdf, y1_pdf]
+    pdf_rows.extend(row_edge)
+    pdf_cols.extend(col_edge)
+
+    table_settings = {"vertical_strategy" : "explicit",
+            "explicit_vertical_lines": pdf_cols,
+            "horizontal_strategy": "explicit",
+            "explicit_horizontal_lines": pdf_rows, 
+            }
+
+    return filename, table_settings
+
+
+
+    #print("pixels:", x0_img, y0_img, x1_img, y1_img, "\n") 
+
+    # result = {
+    #     "page": page_number,
+    #     "pdf_rect": (x0_pdf, y0_pdf, x1_pdf, y1_pdf),
+    #     "pdf_bbox_xywh": (x0_pdf, y0_pdf, x1_pdf - x0_pdf, y1_pdf - y0_pdf),
+    # }
+    # print("Selected rectangle (PDF points):", result)
+
+    # print(result)
 
 
 
@@ -226,13 +410,8 @@ def extract_table_from_pdf(file_path, page_number, table_settings={}):
         im.debug_tablefinder(table_settings).show()
         data = page.extract_tables(table_settings)
         return data 
+        
     
-
-# table = {"vertical_strategy" : "explicit",
-#          "explicit_vertical_lines": [x1_pdf, x0_pdf],
-#          "horizontal_strategy": "explicit",
-#          "explicit_horizontal_lines": [y1_pdf, y0_pdf]}
-
-
-
-extract_table_from_pdf("test_pdfs/JPMorgan_portfolio.pdf",0, table)
+if __name__ == "__main__":
+    file_name, table_set = render_image("test_pdfs/JPMorgan_portfolio.pdf")
+    extract_table_from_pdf("test_pdfs/JPMorgan_portfolio.pdf",0, table_set)
