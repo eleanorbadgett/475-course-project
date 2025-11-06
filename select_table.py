@@ -14,7 +14,7 @@ def render_image(filename, page_number=0):
 
     pdf_path = filename
     #page_number=0
-    zoom = 3.0
+    zoom = 5.0
 
     # --- Load and render the page ---
     doc = fitz.open(pdf_path)
@@ -84,7 +84,7 @@ def render_image(filename, page_number=0):
         selection = {"x0": None, "y0": None, "x1": None, "y1": None, "done": False}
         h_lines, v_lines = [], []
 
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(8, 10))
         ax.imshow(img, cmap="gray")
         ax.set_title(f"Page {page_number}/{total_pages} — Select table area")
         plt.subplots_adjust(bottom=0.05, top=0.95, left=0.05, right=0.95)
@@ -97,6 +97,19 @@ def render_image(filename, page_number=0):
                 "done": True
             })
             rect_selector.set_active(False)
+            # --- Auto-zoom into selected area ---
+            pad = 50  # padding in pixels
+            x0, y0, x1, y1 = selection["x0"], selection["y0"], selection["x1"], selection["y1"]
+
+            # Set new limits with padding (note inverted Y axis)
+            ax.set_xlim(min(x0, x1) - pad, max(x0, x1) + pad)
+            ax.set_ylim(max(y0, y1) + pad, min(y0, y1) - pad)
+
+            # Optionally, draw a border rectangle around cropped region
+            ax.add_patch(plt.Rectangle((min(x0, x1), min(y0, y1)),
+                                        abs(x1 - x0), abs(y1 - y0),
+                                        fill=False, color='green', lw=2))
+            fig.canvas.draw_idle()
             open_popup()
 
         rect_selector = RectangleSelector(ax, onselect,
@@ -154,7 +167,7 @@ def render_image(filename, page_number=0):
         def open_popup():
             popup = tk.Tk()
             popup.title("Table Dimensions")
-            popup.geometry("250x150")
+            popup.geometry("250x200")
 
             ttk.Label(popup, text="Number of Rows:").pack(pady=(15, 0))
             row_entry = ttk.Entry(popup, justify="center")

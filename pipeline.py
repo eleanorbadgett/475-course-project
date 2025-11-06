@@ -2,6 +2,8 @@ from select_table import render_image
 from pdfplumber_475 import extract_table_from_pdf, data_to_csv
 import tkinter as tk
 
+
+
 def approval_popup():
     """
     Creates a simple popup window that asks the user to select
@@ -11,7 +13,7 @@ def approval_popup():
     # Create a temporary Tk root
     popup = tk.Tk()
     popup.title("Approval Check")
-    popup.geometry("250x150")
+    popup.geometry("300x150")
     popup.attributes('-topmost', True)  # ensures it appears in front
 
     result = tk.StringVar(value="")  # to store user’s choice
@@ -65,5 +67,7 @@ def approval_to_output(file_name, page_num):
 
 
 approval_to_output("/Users/eleanorbadgett/475-course-project/test_pdfs/scf23.pdf", 11)
+#approval_to_output("/Users/eleanorbadgett/475-course-project/test_pdfs/JPMorgan_portfolio.pdf", 0)
+#approval_to_output("/Users/eleanorbadgett/475-course-project/test_pdfs/department_of_ed.pdf", 0)
 
 
