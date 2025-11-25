@@ -12,6 +12,9 @@ def start_upload_gui():
     selected_file = tk.StringVar(value="")
     page_number = tk.StringVar(value="1")
 
+    root.selected_file = selected_file
+    root.page_number = page_number
+
 
     def update_button_state(*args):
         file_ok = bool(selected_file.get())
@@ -62,9 +65,9 @@ def start_upload_gui():
             messagebox.showerror("Error", "Page number must be an integer.")
             return
 
-        root.withdraw()  # hide main window during processing
+        # root.withdraw()  # hide main window during processing
         try:
-            approval_to_output(file, page)
+            approval_to_output(file, page, root)
 
         except IndexError:
             messagebox.showwarning("Invalid Page Number", "The page number is out of range for the selected file.")
