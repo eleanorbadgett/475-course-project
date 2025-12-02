@@ -2,6 +2,7 @@ from select_table import render_image, interactive_selector
 from pdfplumber_475 import extract_table_from_pdf, data_to_csv
 import tkinter as tk
 from tkinter import messagebox
+import os
 
 
 
@@ -16,7 +17,10 @@ def approval_popup(parent_window):
     popup.geometry("300x150")
     popup.transient(parent_window)
     popup.grab_set()
-    popup.attributes('-topmost', True)  # ensures it appears in front
+    #popup.attributes('-topmost', True)  # ensures it appears in front
+    popup.lift()
+    popup.after(10, lambda: popup.lift())
+    parent_window.lower()
 
     result = tk.StringVar(value="")  # to store user’s choice
 
@@ -83,8 +87,21 @@ def approval_to_output(file_name, page_num, root):
         # final extraction using user settings
         final_data = extract_table_from_pdf(file_name, page_num, table_settings)
 
+    def test_conflicting_name(file_name):
+        if not os.path.exists(file_name):
+            return file_name
+        name, ext = os.path.splitext(file_name)
+        counter = 1 
+        new_path = f"{name}.{counter}{ext}"
+
+        while os.path.exists(new_path):
+            counter += 1 
+            new_path = f"{name}.{counter}{ext}"
+
+        return new_path
     # ---------------- save CSV ----------------
-    csv_name = file_name.replace(".pdf", "_output.csv")
+    csv_name = file_name.replace(".pdf", f"_output_{page_num+1}.csv")
+    csv_name = test_conflicting_name(csv_name)
     data_to_csv(final_data, csv_name)
 
     # ---------------- success popup ----------------
@@ -99,7 +116,7 @@ def approval_to_output(file_name, page_num, root):
         """
         popup = tk.Toplevel(root)
         popup.title("Extraction Complete")
-        popup.geometry("350x200")
+        popup.geometry("500x200")
         popup.transient(root)
         popup.grab_set()
 
