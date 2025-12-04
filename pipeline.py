@@ -15,12 +15,12 @@ def approval_popup(parent_window):
     popup = tk.Toplevel(parent_window)
     popup.title("Approval Check")
     popup.geometry("300x150")
-    popup.transient(parent_window)
+    #popup.transient(parent_window)
     popup.grab_set()
-    #popup.attributes('-topmost', True)  # ensures it appears in front
+    popup.attributes('-topmost', True)  # ensures it appears in front
     popup.lift()
-    popup.after(10, lambda: popup.lift())
-    parent_window.lower()
+    #popup.after(10, lambda: popup.lift())
+    #parent_window.lower()
 
     result = tk.StringVar(value="")  # to store user’s choice
 
@@ -67,11 +67,11 @@ def approval_popup(parent_window):
 #     data_to_csv(data, newfilename)
 
 
-def approval_to_output(file_name, page_num, root):
+def approval_to_output(file_name, page_num, preview_tk_window):
     initial_data = extract_table_from_pdf(file_name, page_num)
 
     
-    decision = approval_popup(root)
+    decision = approval_popup(preview_tk_window)
 
     if decision == "approved":
         final_data = initial_data
@@ -81,6 +81,7 @@ def approval_to_output(file_name, page_num, root):
 
         # Show debug image and get reference to that window
         debug_window, rect, rows, cols, zoom, page = render_image(file_name, page_num)
+        #decision = approval_popup(preview_tk_window)
         # convert pixel coords → pdf coords
         table_settings = convert_to_pdf_settings(rect, rows, cols, zoom, page)
 
@@ -117,7 +118,7 @@ def approval_to_output(file_name, page_num, root):
         popup = tk.Toplevel(root)
         popup.title("Extraction Complete")
         popup.geometry("500x200")
-        popup.transient(root)
+        #popup.transient(root)
         popup.grab_set()
 
         tk.Label(popup, text=f"Data successfully saved as:\n{csv_name}",
@@ -156,7 +157,7 @@ def approval_to_output(file_name, page_num, root):
         popup.after_idle(popup.attributes, '-topmost', False)
         popup.wait_window()
 
-    extraction_complete_popup(root, csv_name, file_name, page_num)
+    extraction_complete_popup(preview_tk_window, csv_name, file_name, page_num)
 
 # ---------------------- coord conversion helper ----------------------
 def convert_to_pdf_settings(rect, rows, cols, zoom, page):
@@ -180,5 +181,4 @@ if __name__ == "__main__":
     approval_to_output("/Users/eleanorbadgett/475-course-project/test_pdfs/scf23.pdf", 11)
     #approval_to_output("/Users/eleanorbadgett/475-course-project/test_pdfs/JPMorgan_portfolio.pdf", 0)
     #approval_to_output("/Users/eleanorbadgett/475-course-project/test_pdfs/department_of_ed.pdf", 0)
-
 

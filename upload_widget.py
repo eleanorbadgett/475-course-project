@@ -10,7 +10,7 @@ def start_upload_gui():
     root.resizable(False, False)
 
     selected_file = tk.StringVar(value="")
-    page_number = tk.StringVar(value="1")
+    page_number = tk.StringVar(value="")
 
     root.selected_file = selected_file
     root.page_number = page_number

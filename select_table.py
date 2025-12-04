@@ -46,11 +46,12 @@ def interactive_selector(img, zoom, filename, page, page_number):
         selection["x1"] = erelease.xdata
         selection["y1"] = erelease.ydata
 
-            # --- AUTO-ZOOM INTO SELECTED AREA ---
+        # --- AUTO-ZOOM INTO SELECTED AREA ---
         xmin = min(selection["x0"], selection["x1"])
         xmax = max(selection["x0"], selection["x1"])
         ymin = min(selection["y0"], selection["y1"])
         ymax = max(selection["y0"], selection["y1"])
+        
         # ---- ADD PADDING ----
         pad_x = (xmax - xmin) * 0.10
         pad_y = (ymax - ymin) * 0.10
@@ -193,4 +194,6 @@ def interactive_selector(img, zoom, filename, page, page_number):
         max(selection["y0"], selection["y1"]),
     )
 
-    return filename, rect, rows, cols, zoom, page
+    tk_parent = fig.canvas.manager.window 
+    return tk_parent, rect, rows, cols, zoom, page
+    #return filename, rect, rows, cols, zoom, page
