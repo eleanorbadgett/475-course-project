@@ -163,11 +163,17 @@ def approval_to_output(file_name, page_num, preview_tk_window):
 def convert_to_pdf_settings(rect, rows, cols, zoom, page):
     x0, y0, x1, y1 = rect
 
+    crop = page.cropbox 
+
+    print(f"x and y vals: {x0}, {y0}, {x1}, {y1}")
+
     def px_to_pdf(val):
-        return val / zoom
+        return val / zoom + crop.x0 + crop.y0
 
     pdf_rows = [px_to_pdf(y) for y in rows] + [px_to_pdf(y0), px_to_pdf(y1)]
     pdf_cols = [px_to_pdf(x) for x in cols] + [px_to_pdf(x0), px_to_pdf(x1)]
+
+
 
     return {
         "vertical_strategy": "explicit",
